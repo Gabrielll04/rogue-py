@@ -1,0 +1,1 @@
+estado_atual = None
