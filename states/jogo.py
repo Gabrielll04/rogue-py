@@ -153,17 +153,16 @@ class Jogo:
             bullet["y"] += bullet["dy"] * bullet["speed"]
 
             for enemy in self.enemies[:]:
-                hitbox_size = 10 * enemy["size_multiplier"]
-                dist = math.hypot(bullet["x"] - enemy["x"],
-                                  bullet["y"] - enemy["y"])
-                if dist < hitbox_size:
+                enemy_radius = (20 * enemy["size_multiplier"]) / TILE_SIZE  
+
+                dist = math.hypot(bullet["x"] - enemy["x"], bullet["y"] - enemy["y"])
+                if dist < enemy_radius:
                     enemy["hp"] -= self.player_damage
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)
                     if enemy["hp"] <= 0:
                         self.enemies.remove(enemy)
                     break
-
             if not (0 <= bullet["x"] < MAP_WIDTH and
                     0 <= bullet["y"] < MAP_HEIGHT):
                 if bullet in self.bullets:
