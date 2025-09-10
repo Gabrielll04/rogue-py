@@ -27,7 +27,7 @@ class Jogo:
         self.player_max_hp = 10
         self.player_damage = 1
         self.player_fire_rate = 20
-        self.player_speed = 0.4
+        self.player_speed = 0.6
         self.fire_cooldown = 0
 
         self.bullets = []
@@ -54,23 +54,49 @@ class Jogo:
 
     def spawn_wave(self):
         self.enemies.clear()
-        quantidade = 3 + self.wave * 2
-        for _ in range(quantidade):
+        quantidade_total = 3 + self.wave * 2
+        
+        # Chance de tanque: 20% na wave 1, aumenta 5% por wave até 40%
+        tank_chance = min(0.4, 0.2 + (self.wave - 1) * 0.05)
+        
+        for _ in range(quantidade_total):
             ex = random.randint(0, MAP_WIDTH)
             ey = random.randint(0, MAP_HEIGHT)
-
             enemy_sprites = ["enemy_walk1", "enemy_walk2"]
 
-            self.enemies.append({
-                "x": ex,
-                "y": ey,
-                "hp": 2 + self.wave,
-                "max_hp": 2 + self.wave,
-                "sprite_index": 0,
-                "anim_timer": 0,
-                "sprites": enemy_sprites,
-                "actor": Actor(enemy_sprites[0])
-            })
+            if random.random() < tank_chance:
+                # Inimigo tanque
+                self.enemies.append({
+                    "x": ex,
+                    "y": ey,
+                    "hp": (2 + self.wave * 2) * 2, 
+                    "max_hp": (2 + self.wave * 2) * 2,
+                    "sprite_index": 0,
+                    "anim_timer": 0,
+                    "sprites": enemy_sprites,
+                    "actor": Actor(enemy_sprites[0]),
+                    "type": "tank",
+                    "attack_cooldown": 0,
+                    "size_multiplier": 1.8,
+                    "damage": 2,
+                    "speed": 0.1
+                })
+            else:
+                self.enemies.append({
+                    "x": ex,
+                    "y": ey,
+                    "hp": 2 + self.wave,
+                    "max_hp": 2 + self.wave,
+                    "sprite_index": 0,
+                    "anim_timer": 0,
+                    "sprites": enemy_sprites,
+                    "actor": Actor(enemy_sprites[0]),
+                    "attack_cooldown": 0,
+                    "type": "normal",
+                    "size_multiplier": 1.0,
+                    "damage": 1,
+                    "speed": 0.3
+                })
 
     def animate_player(self, moving, direction="right"):
         self.player_anim_timer += 1
@@ -97,21 +123,14 @@ class Jogo:
             return
 
         moving = False
+        direction = "right"
+        
         if self.keyboard[self.keys.W]:
             self.player_y -= self.player_speed
             moving = True
         if self.keyboard[self.keys.S]:
             self.player_y += self.player_speed
             moving = True
-        if self.keyboard[self.keys.A]:
-            self.player_x -= self.player_speed
-            moving = True
-        if self.keyboard[self.keys.D]:
-            self.player_x += self.player_speed
-            moving = True
-        self.animate_player(moving)
-
-        direction = "right"
         if self.keyboard[self.keys.A]:
             self.player_x -= self.player_speed
             moving = True
@@ -134,9 +153,10 @@ class Jogo:
             bullet["y"] += bullet["dy"] * bullet["speed"]
 
             for enemy in self.enemies[:]:
+                hitbox_size = 10 * enemy["size_multiplier"]
                 dist = math.hypot(bullet["x"] - enemy["x"],
                                   bullet["y"] - enemy["y"])
-                if dist < 10:
+                if dist < hitbox_size:
                     enemy["hp"] -= self.player_damage
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)
@@ -154,12 +174,17 @@ class Jogo:
             dy = self.player_y - enemy["y"]
             dist = max(1, (dx**2 + dy**2) ** 0.5)
 
-            min_dist = (PLAYER_SIZE // 2 + 10) / TILE_SIZE
-            if dist > min_dist:
-                enemy["x"] += dx / dist * 0.1
-                enemy["y"] += dy / dist * 0.1
+            min_dist = (PLAYER_SIZE // 2 + 10 * enemy["size_multiplier"]) / TILE_SIZE
+            if dist <= min_dist:
+                if enemy["attack_cooldown"] <= 0:
+                    self.player_hp -= 1
+                    enemy["attack_cooldown"] = 20  # frames de recarga antes do próximo hit
             else:
-                self.player_hp -= 0.01
+                enemy["x"] += dx / dist * enemy["speed"]
+                enemy["y"] += dy / dist * enemy["speed"]
+
+            if enemy["attack_cooldown"] > 0:
+                enemy["attack_cooldown"] -= 1
 
             self.animate_enemy(enemy)
 
@@ -202,7 +227,7 @@ class Jogo:
             "y": self.player_y,
             "dx": dx,
             "dy": dy,
-            "speed": 0.7
+            "speed": 2
         })
 
     def on_mouse_move(self, pos, rel, buttons):
@@ -233,6 +258,11 @@ class Jogo:
                 "tipo": "velocidade",
                 "nome": "Velocidade",
                 "descricao": f"Movimento mais rápido (Atual: {self.player_speed:.2f})"
+            },
+            {
+                "tipo": "dano",
+                "nome": "Mais Dano",
+                "descricao": f"Dano por tiro +1 (Atual: {self.player_damage})"
             }
         ]
         self.upgrade_options = random.sample(all_upgrades, 3)
@@ -246,6 +276,8 @@ class Jogo:
             self.player_fire_rate = max(3, self.player_fire_rate - 3)
         elif upgrade_tipo == "velocidade":
             self.player_speed += 0.1
+        elif upgrade_tipo == "dano":
+            self.player_damage += 1
 
     def draw(self, screen):
         if self.game_state == "upgrade_selection":
@@ -279,17 +311,31 @@ class Jogo:
         for enemy in self.enemies:
             enemy["actor"].pos = (enemy["x"] * TILE_SIZE + offset_x,
                                   enemy["y"] * TILE_SIZE + offset_y)
-            enemy["actor"].draw()
+            
+            if enemy["type"] == "tank":
+                original_scale = getattr(enemy["actor"], '_scale', 1.0)
+                enemy["actor"]._scale = enemy["size_multiplier"]
+                enemy["actor"].draw()
+                enemy["actor"]._scale = original_scale
+                
+                tank_rect = Rect((enemy["actor"].pos[0] - 25, enemy["actor"].pos[1] - 25), (50, 50))
+                screen.draw.rect(tank_rect, "darkred")
+            else:
+                enemy["actor"].draw()
 
+            health_bar_width = int(40 * enemy["size_multiplier"])
             health_percentage = enemy["hp"] / enemy["max_hp"]
-            health_width = int(40 * health_percentage)
-            bg_health_rect = Rect((enemy["actor"].pos[0] - 20,
-                                   enemy["actor"].pos[1] - 30), (40, 4))
+            health_width = int(health_bar_width * health_percentage)
+            
+            bg_health_rect = Rect((enemy["actor"].pos[0] - health_bar_width // 2,
+                                   enemy["actor"].pos[1] - 35 * enemy["size_multiplier"]), 
+                                   (health_bar_width, 6))
             screen.draw.filled_rect(bg_health_rect, "darkred")
+            
             if health_width > 0:
-                health_rect = Rect((enemy["actor"].pos[0] - 20,
-                                   enemy["actor"].pos[1] - 30),
-                                   (health_width, 4))
+                health_rect = Rect((enemy["actor"].pos[0] - health_bar_width // 2,
+                                   enemy["actor"].pos[1] - 35 * enemy["size_multiplier"]),
+                                   (health_width, 6))
                 if health_percentage > 0.6:
                     health_color = "green"
                 elif health_percentage > 0.3:
