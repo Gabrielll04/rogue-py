@@ -4,7 +4,7 @@ from states.jogo import Jogo
 from pgzero import music
 
 class Menu:
-    def __init__(self, play_sound_callback, keys_callback):
+    def __init__(self, play_sound_callback, keys_callback, keyboard_ref):
         self.botoes = [
             Botao("Jogar", 300, 200),
             Botao("Sair", 300, 300),
@@ -13,8 +13,8 @@ class Menu:
         ]
 
         self.play_sound = play_sound_callback
-
         self.keys = keys_callback
+        self.keyboard = keyboard_ref
 
     def draw(self, screen):
         screen.clear()
@@ -28,7 +28,7 @@ class Menu:
 
     def on_mouse_down(self, pos):
         if self.botoes[0].clicado(pos):  # Jogar
-            state_manager.estado_atual = Jogo(play_sound_callback=self.play_sound, keys_callback=self.keys)
+            state_manager.estado_atual = Jogo(play_sound_callback=self.play_sound, keys_callback=self.keys, keyboard_ref=self.keyboard)
             if config.SONS_ATIVOS:
                 self.play_sound()
 

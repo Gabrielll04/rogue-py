@@ -3,7 +3,11 @@ from core import config, state_manager
 from states.menu import Menu
 
 # Estado inicial
-state_manager.estado_atual = Menu(play_sound_callback=sounds.click.play, keys_callback=keys)
+state_manager.estado_atual = Menu(
+    play_sound_callback=sounds.click.play,
+    keys_callback=keys,
+    keyboard_ref=keyboard
+)
 
 # Música inicial
 music.play("bgm")
