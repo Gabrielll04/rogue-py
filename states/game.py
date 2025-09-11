@@ -2,7 +2,7 @@ import random
 import math
 from pgzero.rect import Rect
 from pgzero.actor import Actor
-from ui.botao import Botao
+from ui.button import Button
 from core import state_manager
 
 TILE_SIZE = 10
@@ -10,7 +10,7 @@ PLAYER_SIZE = 40
 MAP_WIDTH, MAP_HEIGHT = 200, 200
 
 
-class Jogo:
+class Game:
     def __init__(self, play_sound_callback, keys_callback, keyboard_ref,
                  config_ref, mouse_ref):
         self.play_sound = play_sound_callback
@@ -43,7 +43,6 @@ class Jogo:
 
         self.map_data = self.gerar_mapa()
 
-        # Player animation
         self.player_idle_sprites = [
             "player_idle1", "player_idle2", "player_idle3", "player_idle4",
             "player_idle5", "player_idle6", "player_idle7", "player_idle8",
@@ -56,7 +55,6 @@ class Jogo:
         self.player_anim_timer = 0
         self.player_actor = Actor(self.player_idle_sprites[0])
 
-        # Botão para voltar ao menu (criado apenas quando necessário)
         self.menu_button = None
 
     def gerar_mapa(self):
@@ -143,7 +141,7 @@ class Jogo:
         if self.player_hp <= 0:
             self.game_state = "game_over"
             if self.menu_button is None:
-                self.menu_button = Botao(
+                self.menu_button = Button(
                     "Voltar ao Menu",
                     self.config.WIDTH // 2 - 100,
                     300,
@@ -269,7 +267,7 @@ class Jogo:
         self.mouse_left_pressed = self.mouse.LEFT in buttons
 
         if self.game_state == "game_over" and self.menu_button:
-            self.menu_button.verificar_hover(pos)
+            self.menu_button.verify_hover(pos)
 
     def on_mouse_down(self, pos, button):
         if button == 1:

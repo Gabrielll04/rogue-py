@@ -1,1 +1,1 @@
-estado_atual = None
+current_state = None
