@@ -5,6 +5,7 @@ from pgzero.actor import Actor
 TILE_SIZE = 10
 PLAYER_SIZE = 40
 
+
 class Enemy:
     def __init__(self, x, y, wave, is_tank=False):
         self.x = x

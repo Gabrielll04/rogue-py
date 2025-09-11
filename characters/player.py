@@ -4,6 +4,7 @@ from pgzero.actor import Actor
 
 TILE_SIZE = 10
 PLAYER_SIZE = 40
+MAP_WIDTH, MAP_HEIGHT = 200, 200
 
 class Player:
     def __init__(self, x, y, play_sound, config, keyboard, keys):
@@ -65,6 +66,9 @@ class Player:
             self.x += self.speed
             moving = True
             self.direction = "right"
+
+        self.x = max(0, min(self.x, MAP_WIDTH - 1))
+        self.y = max(0, min(self.y, MAP_HEIGHT - 1))
 
         self.animate(moving)
 
