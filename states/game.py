@@ -227,7 +227,7 @@ class Game:
                          color="red", fontsize=50)
 
         if self.menu_button:
-            self.menu_button.desenhar(screen)
+            self.menu_button.draw(screen)
 
     def on_mouse_move(self, pos, rel, buttons):
         self.mouse_pos = pos
@@ -238,9 +238,9 @@ class Game:
     def on_mouse_down(self, pos, button):
         if button == 1:
             if (self.game_state == "game_over" and self.menu_button and 
-                self.menu_button.clicado(pos)):
+                self.menu_button.clicked(pos)):
                 from states.menu import Menu
-                state_manager.estado_atual = Menu(
+                state_manager.current_state = Menu(
                     play_sound_callback=self.play_sound,
                     keys_callback=self.keys,
                     keyboard_ref=self.keyboard,
