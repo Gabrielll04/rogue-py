@@ -2,6 +2,8 @@ import random
 import math
 from pgzero.rect import Rect
 from pgzero.actor import Actor
+from ui.botao import Botao
+from core import state_manager
 
 TILE_SIZE = 10
 PLAYER_SIZE = 40
@@ -25,6 +27,7 @@ class Jogo:
         self.player_y = MAP_HEIGHT // 2
         self.player_hp = 10
         self.player_max_hp = 10
+        self.player_direction = "right"
         self.player_damage = 1
         self.player_fire_rate = 20
         self.player_speed = 0.6
@@ -41,11 +44,20 @@ class Jogo:
         self.map_data = self.gerar_mapa()
 
         # Player animation
-        self.player_idle_sprites = ["player_idle1", "player_idle2", "player_idle3", "player_idle4", "player_idle5", "player_idle6", "player_idle7", "player_idle8", "player_idle9"]
-        self.player_walk_sprites = ["player_walk1", "player_walk2", "player_walk3", "player_walk4"]
+        self.player_idle_sprites = [
+            "player_idle1", "player_idle2", "player_idle3", "player_idle4",
+            "player_idle5", "player_idle6", "player_idle7", "player_idle8",
+            "player_idle9"
+        ]
+        self.player_walk_sprites = [
+            "player_walk1", "player_walk2", "player_walk3", "player_walk4"
+        ]
         self.player_sprite_index = 0
         self.player_anim_timer = 0
         self.player_actor = Actor(self.player_idle_sprites[0])
+
+        # Botão para voltar ao menu (criado apenas quando necessário)
+        self.menu_button = None
 
     def gerar_mapa(self):
         cores = ["#2e8b57", "#3cb371", "#228b22"]
@@ -102,8 +114,10 @@ class Jogo:
         self.player_anim_timer += 1
         if self.player_anim_timer >= 4:
             self.player_anim_timer = 0
-            sprite_list = self.player_walk_sprites if moving else self.player_idle_sprites
-            self.player_sprite_index = (self.player_sprite_index + 1) % len(sprite_list)
+            sprite_list = (self.player_walk_sprites if moving 
+                          else self.player_idle_sprites)
+            self.player_sprite_index = ((self.player_sprite_index + 1) 
+                                       % len(sprite_list))
             base_name = sprite_list[self.player_sprite_index]
             if direction == "left":
                 self.player_actor.image = base_name + "_left"
@@ -114,7 +128,8 @@ class Jogo:
         enemy["anim_timer"] += 1
         if enemy["anim_timer"] >= 5:
             enemy["anim_timer"] = 0
-            enemy["sprite_index"] = (enemy["sprite_index"] + 1) % len(enemy["sprites"])
+            enemy["sprite_index"] = ((enemy["sprite_index"] + 1) 
+                                    % len(enemy["sprites"]))
             enemy["actor"].image = enemy["sprites"][enemy["sprite_index"]]
 
     def update(self):
@@ -122,9 +137,25 @@ class Jogo:
             self.handle_upgrade_selection()
             return
 
+        if self.game_state == "game_over":
+            return
+
+        if self.player_hp <= 0:
+            self.game_state = "game_over"
+            # Criar botão quando entrar no game over
+            if self.menu_button is None:
+                self.menu_button = Botao(
+                    "Voltar ao Menu",
+                    self.config.WIDTH // 2 - 100,
+                    300,
+                    200,
+                    60,
+                    cor="darkred",
+                    cor_hover="red"
+                )
+
         moving = False
-        direction = "right"
-        
+
         if self.keyboard[self.keys.W]:
             self.player_y -= self.player_speed
             moving = True
@@ -134,13 +165,13 @@ class Jogo:
         if self.keyboard[self.keys.A]:
             self.player_x -= self.player_speed
             moving = True
-            direction = "left"
+            self.player_direction = "left"
         if self.keyboard[self.keys.D]:
             self.player_x += self.player_speed
             moving = True
-            direction = "right"
+            self.player_direction = "right"
 
-        self.animate_player(moving, direction)
+        self.animate_player(moving, self.player_direction)
 
         if self.fire_cooldown > 0:
             self.fire_cooldown -= 1
@@ -155,7 +186,8 @@ class Jogo:
             for enemy in self.enemies[:]:
                 enemy_radius = (20 * enemy["size_multiplier"]) / TILE_SIZE  
 
-                dist = math.hypot(bullet["x"] - enemy["x"], bullet["y"] - enemy["y"])
+                dist = math.hypot(bullet["x"] - enemy["x"], 
+                                 bullet["y"] - enemy["y"])
                 if dist < enemy_radius:
                     enemy["hp"] -= self.player_damage
                     if bullet in self.bullets:
@@ -173,11 +205,13 @@ class Jogo:
             dy = self.player_y - enemy["y"]
             dist = max(1, (dx**2 + dy**2) ** 0.5)
 
-            min_dist = (PLAYER_SIZE // 2 + 10 * enemy["size_multiplier"]) / TILE_SIZE
+            min_dist = ((PLAYER_SIZE // 2 + 10 * enemy["size_multiplier"]) 
+                       / TILE_SIZE)
             if dist <= min_dist:
                 if enemy["attack_cooldown"] <= 0:
                     self.player_hp -= 1
-                    enemy["attack_cooldown"] = 20  # frames de recarga antes do próximo hit
+                    # frames de recarga antes do próximo hit
+                    enemy["attack_cooldown"] = 20  
             else:
                 enemy["x"] += dx / dist * enemy["speed"]
                 enemy["y"] += dy / dist * enemy["speed"]
@@ -232,9 +266,26 @@ class Jogo:
     def on_mouse_move(self, pos, rel, buttons):
         self.mouse_pos = pos
         self.mouse_left_pressed = self.mouse.LEFT in buttons
+        
+        # Atualizar hover do botão se estiver na tela de game over
+        if self.game_state == "game_over" and self.menu_button:
+            self.menu_button.verificar_hover(pos)
 
     def on_mouse_down(self, pos, button):
         if button == 1:
+            # Verificar clique no botão de menu se estiver na tela de game over
+            if (self.game_state == "game_over" and self.menu_button and 
+                self.menu_button.clicado(pos)):
+                from states.menu import Menu
+                state_manager.estado_atual = Menu(
+                    play_sound_callback=self.play_sound,
+                    keys_callback=self.keys,
+                    keyboard_ref=self.keyboard,
+                    config_ref=self.config,
+                    mouse_ref=self.mouse
+                )
+                return
+            
             self.mouse_left_pressed = True
 
     def on_mouse_up(self, pos, button):
@@ -282,6 +333,9 @@ class Jogo:
         if self.game_state == "upgrade_selection":
             self.draw_game(screen)
             self.draw_upgrade_selection(screen)
+        elif self.game_state == "game_over":
+            self.draw_game(screen)
+            self.draw_game_over(screen)
         else:
             self.draw_game(screen)
 
@@ -317,7 +371,8 @@ class Jogo:
                 enemy["actor"].draw()
                 enemy["actor"]._scale = original_scale
                 
-                tank_rect = Rect((enemy["actor"].pos[0] - 25, enemy["actor"].pos[1] - 25), (50, 50))
+                tank_rect = Rect((enemy["actor"].pos[0] - 25, 
+                                 enemy["actor"].pos[1] - 25), (50, 50))
                 screen.draw.rect(tank_rect, "darkred")
             else:
                 enemy["actor"].draw()
@@ -326,15 +381,19 @@ class Jogo:
             health_percentage = enemy["hp"] / enemy["max_hp"]
             health_width = int(health_bar_width * health_percentage)
             
-            bg_health_rect = Rect((enemy["actor"].pos[0] - health_bar_width // 2,
-                                   enemy["actor"].pos[1] - 35 * enemy["size_multiplier"]), 
-                                   (health_bar_width, 6))
+            bg_health_rect = Rect(
+                (enemy["actor"].pos[0] - health_bar_width // 2,
+                 enemy["actor"].pos[1] - 35 * enemy["size_multiplier"]), 
+                (health_bar_width, 6)
+            )
             screen.draw.filled_rect(bg_health_rect, "darkred")
             
             if health_width > 0:
-                health_rect = Rect((enemy["actor"].pos[0] - health_bar_width // 2,
-                                   enemy["actor"].pos[1] - 35 * enemy["size_multiplier"]),
-                                   (health_width, 6))
+                health_rect = Rect(
+                    (enemy["actor"].pos[0] - health_bar_width // 2,
+                     enemy["actor"].pos[1] - 35 * enemy["size_multiplier"]),
+                    (health_width, 6)
+                )
                 if health_percentage > 0.6:
                     health_color = "green"
                 elif health_percentage > 0.3:
@@ -383,3 +442,16 @@ class Jogo:
             inst_x = self.config.WIDTH // 2 - len(instruction) * 3
             screen.draw.text(instruction, (inst_x, 450 + i * 20),
                              color="yellow", fontsize=14)
+
+    def draw_game_over(self, screen):
+        overlay = Rect((0, 0), (self.config.WIDTH, self.config.HEIGHT))
+        screen.draw.filled_rect(overlay, (0, 0, 0, 200))
+
+        title_text = "GAME OVER"
+        title_x = self.config.WIDTH // 2 - len(title_text) * 6
+        screen.draw.text(title_text, (title_x, 150),
+                        color="red", fontsize=50)
+
+        # Usar o botão da UI em vez do desenho manual
+        if self.menu_button:
+            self.menu_button.desenhar(screen)

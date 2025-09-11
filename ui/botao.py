@@ -10,7 +10,7 @@ class Botao:
         self.hover = False
 
     def desenhar(self, screen):
-        from pgzero.rect import Rect  # importa aqui pra evitar conflitos
+        from pgzero.rect import Rect
         cor_atual = self.cor_hover if self.hover else self.cor
         rect = Rect((self.x, self.y), (self.largura, self.altura))
         screen.draw.filled_rect(rect, cor_atual)
