@@ -2,16 +2,18 @@ import pgzrun
 from core import config, state_manager
 from states.menu import Menu
 
-# Estado inicial
+def play_sound(nome):
+    if config.SONS_ATIVOS:
+        getattr(sounds, nome).play()
+
 state_manager.estado_atual = Menu(
-    play_sound_callback=sounds.click.play,
+    play_sound_callback=play_sound,
     keys_callback=keys,
     keyboard_ref=keyboard,
     config_ref=config,
     mouse_ref=mouse
 )
 
-# Música inicial
 music.play("bgm")
 music.set_volume(0.5)
 

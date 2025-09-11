@@ -32,7 +32,7 @@ class Menu:
         if self.botoes[0].clicado(pos):  # Jogar
             state_manager.estado_atual = Jogo(play_sound_callback=self.play_sound, keys_callback=self.keys, keyboard_ref=self.keyboard, config_ref=self.config, mouse_ref=self.mouse)
             if config.SONS_ATIVOS:
-                self.play_sound()
+                self.play_sound("click")
 
         elif self.botoes[1].clicado(pos):  # Sair
             exit()
@@ -50,5 +50,5 @@ class Menu:
             config.SONS_ATIVOS = not config.SONS_ATIVOS
             self.botoes[3].texto = f"Sons: {'ON' if config.SONS_ATIVOS else 'OFF'}"
             if config.SONS_ATIVOS:
-                self.play_sound()
+                self.play_sound("click")
 

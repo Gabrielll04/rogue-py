@@ -142,7 +142,6 @@ class Jogo:
 
         if self.player_hp <= 0:
             self.game_state = "game_over"
-            # Criar botão quando entrar no game over
             if self.menu_button is None:
                 self.menu_button = Botao(
                     "Voltar ao Menu",
@@ -263,17 +262,17 @@ class Jogo:
             "speed": 2
         })
 
+        self.play_sound("shoot")
+
     def on_mouse_move(self, pos, rel, buttons):
         self.mouse_pos = pos
         self.mouse_left_pressed = self.mouse.LEFT in buttons
-        
-        # Atualizar hover do botão se estiver na tela de game over
+
         if self.game_state == "game_over" and self.menu_button:
             self.menu_button.verificar_hover(pos)
 
     def on_mouse_down(self, pos, button):
         if button == 1:
-            # Verificar clique no botão de menu se estiver na tela de game over
             if (self.game_state == "game_over" and self.menu_button and 
                 self.menu_button.clicado(pos)):
                 from states.menu import Menu
