@@ -106,6 +106,7 @@ class Game:
 
         if not self.enemies:
             self.wave += 1
+            self.player.hp = self.player.max_hp
             self.game_state = "upgrade_selection"
             self.generate_upgrade_options()
 
