@@ -29,7 +29,7 @@ class Menu:
     def draw(self, screen):
         screen.clear()
         screen.draw.text(
-            "MENU PRINCIPAL",
+            "ROGUE PY",
             center=(config.WIDTH / 2, 100),
             fontsize=60,
         )
